@@ -1,0 +1,246 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Dodge the Ball or Shoot It - by Abdul Hannan</title>
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: Arial, sans-serif;
+      text-align: center;
+      background: #111;
+      color: #fff;
+    }
+    #game-container {
+      width: 800px;
+      height: 500px;
+      margin: 20px auto;
+      background: #222;
+      position: relative;
+      overflow: hidden;
+      border: 2px solid #fff;
+    }
+    .player {
+      width: 40px;
+      height: 40px;
+      background: lime;
+      position: absolute;
+    }
+    .player2 {
+      background: cyan;
+    }
+    .ball {
+      width: 20px;
+      height: 20px;
+      background: red;
+      border-radius: 50%;
+      position: absolute;
+    }
+    .bullet {
+      width: 6px;
+      height: 10px;
+      background: yellow;
+      position: absolute;
+    }
+    #scoreboard {
+      margin: 10px;
+      font-size: 20px;
+    }
+    #menu {
+      margin-top: 100px;
+    }
+    button {
+      padding: 10px 20px;
+      font-size: 18px;
+      margin: 10px;
+    }
+  </style>
+</head>
+<body>
+
+<div id="menu">
+  <h1>Dodge the Ball or Shoot It</h1>
+  <p>by Abdul Hannan</p>
+  <p>Choose number of players:</p>
+  <button onclick="startGame(1)">1 Player</button>
+  <button onclick="startGame(2)">2 Players</button>
+</div>
+
+<div id="scoreboard" style="display:none;">
+  <span id="score1">Player 1: 0</span>
+  <span id="score2" style="margin-left: 30px;"></span>
+</div>
+
+<div id="game-container" style="display:none;"></div>
+
+<script>
+  let player1, player2, ballInterval, bulletInterval, score1 = 0, score2 = 0;
+  let bullets = [], balls = [], players = [];
+  let keys = {};
+  let gameRunning = false;
+
+  const container = document.getElementById('game-container');
+  const scoreboard = document.getElementById('scoreboard');
+  const score1El = document.getElementById('score1');
+  const score2El = document.getElementById('score2');
+  let mode = 1, name1 = "Player 1", name2 = "Player 2";
+
+  function startGame(selectedMode) {
+    mode = selectedMode;
+    name1 = prompt("Enter Player 1 Name:", "Player 1") || "Player 1";
+    if (mode === 2) {
+      name2 = prompt("Enter Player 2 Name:", "Player 2") || "Player 2";
+      score2El.style.display = "inline";
+    }
+
+    document.getElementById('menu').style.display = 'none';
+    container.style.display = 'block';
+    scoreboard.style.display = 'block';
+    resetScores();
+    initPlayers();
+    gameRunning = true;
+
+    ballInterval = setInterval(spawnBall, 1000);
+    bulletInterval = setInterval(updateGame, 30);
+  }
+
+  function resetScores() {
+    score1 = 0;
+    score2 = 0;
+    score1El.textContent = `${name1}: ${score1}`;
+    score2El.textContent = mode === 2 ? `${name2}: ${score2}` : '';
+  }
+
+  function initPlayers() {
+    player1 = createPlayer(100, 400, 'player');
+    players.push(player1);
+
+    if (mode === 2) {
+      player2 = createPlayer(600, 400, 'player player2');
+      players.push(player2);
+    }
+  }
+
+  function createPlayer(x, y, className) {
+    const p = document.createElement('div');
+    p.className = className;
+    p.style.left = x + 'px';
+    p.style.top = y + 'px';
+    container.appendChild(p);
+    return p;
+  }
+
+  function spawnBall() {
+    const b = document.createElement('div');
+    b.className = 'ball';
+    b.style.left = Math.random() * 780 + 'px';
+    b.style.top = '0px';
+    container.appendChild(b);
+    balls.push(b);
+  }
+
+  function shoot(player, isPlayer2 = false) {
+    const bullet = document.createElement('div');
+    bullet.className = 'bullet';
+    const left = parseInt(player.style.left) + 17;
+    const top = parseInt(player.style.top) - 10;
+    bullet.style.left = left + 'px';
+    bullet.style.top = top + 'px';
+    bullet.dataset.player = isPlayer2 ? "2" : "1";
+    container.appendChild(bullet);
+    bullets.push(bullet);
+  }
+
+  function updateGame() {
+    movePlayers();
+    updateBullets();
+    updateBalls();
+    checkCollisions();
+  }
+
+  function movePlayers() {
+    if (keys['w']) move(player1, 0, -5);
+    if (keys['s']) move(player1, 0, 5);
+    if (keys['a']) move(player1, -5, 0);
+    if (keys['d']) move(player1, 5, 0);
+    if (keys['f']) shoot(player1);
+
+    if (mode === 2) {
+      if (keys['ArrowUp']) move(player2, 0, -5);
+      if (keys['ArrowDown']) move(player2, 0, 5);
+      if (keys['ArrowLeft']) move(player2, -5, 0);
+      if (keys['ArrowRight']) move(player2, 5, 0);
+      if (keys['l']) shoot(player2, true);
+    }
+  }
+
+  function move(el, dx, dy) {
+    let left = parseInt(el.style.left) + dx;
+    let top = parseInt(el.style.top) + dy;
+    left = Math.max(0, Math.min(container.clientWidth - 40, left));
+    top = Math.max(0, Math.min(container.clientHeight - 40, top));
+    el.style.left = left + 'px';
+    el.style.top = top + 'px';
+  }
+
+  function updateBullets() {
+    bullets.forEach((b, i) => {
+      b.style.top = parseInt(b.style.top) - 10 + 'px';
+      if (parseInt(b.style.top) < 0) {
+        b.remove();
+        bullets.splice(i, 1);
+      }
+    });
+  }
+
+  function updateBalls() {
+    balls.forEach((b, i) => {
+      b.style.top = parseInt(b.style.top) + 4 + 'px';
+      if (parseInt(b.style.top) > container.clientHeight) {
+        b.remove();
+        balls.splice(i, 1);
+      }
+    });
+  }
+
+  function checkCollisions() {
+    balls.forEach((ball, i) => {
+      const bx = parseInt(ball.style.left);
+      const by = parseInt(ball.style.top);
+
+      // Player hit
+      players.forEach((p, j) => {
+        const px = parseInt(p.style.left);
+        const py = parseInt(p.style.top);
+        if (bx < px + 40 && bx + 20 > px && by < py + 40 && by + 20 > py) {
+          alert(`${j === 0 ? name1 : name2} got hit! Game Over.`);
+          stopGame();
+        }
+      });
+
+      // Bullet hit
+      bullets.forEach((bullet, k) => {
+        const blx = parseInt(bullet.style.left);
+        const bly = parseInt(bullet.style.top);
+        if (blx < bx + 20 && blx + 6 > bx && bly < by + 20 && bly + 10 > by) {
+          ball.remove();
+          bullet.remove();
+          balls.splice(i, 1);
+          bullets.splice(k, 1);
+
+          if (bullet.dataset.player === "1") {
+            score1++;
+            score1El.textContent = `${name1}: ${score1}`;
+          } else {
+            score2++;
+            score2El.textContent = `${name2}: ${score2}`;
+          }
+        }
+      });
+    });
+  }
+
+  function stopGame
+</head>
+</html>
